@@ -17,7 +17,7 @@ import {
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-// import { Toast } from "@/components/ui/toast";
+import { useToast } from "@/hooks/use-toast";
 import { useFeatureFlags } from "@/stores/featureFlags";
 import { useCartStore, type CartItem, type MenuItem } from "@/stores/cartStore";
 
@@ -77,6 +77,7 @@ const menuItems: MenuItem[] = [
 ];
 
 export default function Menu() {
+  const { toast } = useToast();
   const { showSeasonalMenu, showNutritionInfo, enableCustomization } =
     useFeatureFlags();
 
@@ -110,12 +111,15 @@ export default function Menu() {
 
     addToCart(cartItem);
 
-    // Optional: Show toast notification
-    // Toast({
-    //   title: "Added to Cart",
-    //   description: `${item.name} added successfully`,
-    //   variant: "default",
-    // });
+    setCustomizations((prev) => ({
+      ...prev,
+      [item.id]: {},
+    }));
+
+    toast({
+      title: "Added to Cart",
+      description: `${item.name} has been added to your cart`,
+    });
   };
 
   const calculateTotalPrice = (item: MenuItem) => {
@@ -128,15 +132,6 @@ export default function Menu() {
 
     return item.price + extraCost;
   };
-  // const calculateTotalPrice = (
-  //   item: MenuItem,
-  //   selectedCustoms?: { name: string; price: number }[],
-  // ) => {
-  //   const customsTotal =
-  //     selectedCustoms?.reduce((total, custom) => total + custom.price, 0) || 0;
-
-  //   return item.price + customsTotal;
-  // };
 
   const toggleCustomization = (itemId: number, optionName: string) => {
     setCustomizations((prev) => ({
@@ -222,12 +217,12 @@ export default function Menu() {
                               className="flex justify-between w-full"
                             >
                               {option.name}
-                              {option.price !== 0 && (
+                              {
                                 <span className="text-muted-foreground">
-                                  {option.price > 0 ? "+" : ""}$
-                                  {option.price.toFixed(2)}
+                                  {option.price >= 0 ? "+" : "-"}$
+                                  {Math.abs(option.price).toFixed(2)}
                                 </span>
-                              )}
+                              }
                             </Label>
                           </div>
                         ))}

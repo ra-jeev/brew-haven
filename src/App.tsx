@@ -1,6 +1,6 @@
-import { ThemeProvider } from "@/components/theme-provider";
-
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/toaster";
 import { useFeatureFlags } from "@/stores/featureFlags";
 import Layout from "@/components/layout";
 import Home from "@/pages/home";
@@ -28,6 +28,7 @@ function App() {
           </Routes>
         </Layout>
       </Router>
+      <Toaster />
     </ThemeProvider>
   );
 }
