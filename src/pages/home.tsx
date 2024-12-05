@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Coffee, MapPin, Clock } from "lucide-react";
+import { Coffee, Leaf, MapPin, Clock } from "lucide-react";
 
 export default function Home() {
   const { showSeasonalMenu } = useFeatureFlags();
@@ -56,8 +56,9 @@ export default function Home() {
           <Card className="border-2 border-coffee hover:shadow-lg transition-shadow">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Badge variant="secondary">New</Badge>
+                <Leaf className="w-6 h-6" />
                 Seasonal Specials
+                <Badge variant="secondary">New</Badge>
               </CardTitle>
               <CardDescription>
                 Try our limited-time seasonal drinks, crafted to perfection with
