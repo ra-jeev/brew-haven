@@ -26,6 +26,8 @@ interface OrderState {
   createOrder: (orderData: Omit<Order, "id" | "orderDate">) => void;
   updateOrderStatus: (orderId: string, status: Order["status"]) => void;
   clearCurrentOrder: () => void;
+  availableLoyaltyPoints: number;
+  setLoyaltyPoints: (points: number) => void;
 }
 
 export const useOrderStore = create<OrderState>()(
@@ -62,6 +64,9 @@ export const useOrderStore = create<OrderState>()(
       clearCurrentOrder: () => {
         set({ currentOrder: null });
       },
+
+      availableLoyaltyPoints: 150,
+      setLoyaltyPoints: (points) => set({ availableLoyaltyPoints: points }),
     }),
     {
       name: "order-storage",

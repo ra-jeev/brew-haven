@@ -1,7 +1,10 @@
+import { Link } from "react-router-dom";
 import { useState } from "react";
 import { useFeatureFlags } from "@/stores/featureFlags";
 import { useCartStore } from "@/stores/cartStore";
 import { useOrderStore } from "@/stores/orderStore";
+import { useToast } from "@/hooks/use-toast";
+import { ShoppingBag } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -20,20 +23,43 @@ export default function Checkout() {
   } = useFeatureFlags();
 
   const { items, clearCart } = useCartStore();
-  const { createOrder, currentOrder, updateOrderStatus } = useOrderStore();
+  const {
+    createOrder,
+    currentOrder,
+    updateOrderStatus,
+    availableLoyaltyPoints,
+    setLoyaltyPoints,
+  } = useOrderStore();
 
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [pointsApplied, setPointsApplied] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("card");
 
-  const subtotal = items.reduce((sum, item) => sum + item.totalPrice, 0);
-  const loyaltyDiscount = pointsApplied ? 1.5 : 0;
+  const subtotal = items.reduce(
+    (sum, item) => sum + item.totalPrice * item.quantity,
+    0,
+  );
+  const loyaltyDiscount = pointsApplied ? availableLoyaltyPoints / 100 : 0;
   const total = +(subtotal - loyaltyDiscount).toFixed(2);
 
+  const { toast } = useToast();
   const handleApplyPoints = () => {
-    if (!pointsApplied) {
+    if (!pointsApplied && availableLoyaltyPoints) {
       setPointsApplied(true);
+      setLoyaltyPoints(0);
+      toast({
+        title: "Loyalty Points Applied",
+        description: "Your loyalty points have been applied to this order.",
+      });
     }
+  };
+
+  const handleClearCart = () => {
+    clearCart();
+    toast({
+      title: "Cart Cleared",
+      description: "All items have been removed from your cart.",
+    });
   };
 
   const handlePlaceOrder = () => {
@@ -73,9 +99,42 @@ export default function Checkout() {
   const displayTotal = orderPlaced && currentOrder ? currentOrder.total : total;
   const displayStatus = orderPlaced && currentOrder ? currentOrder.status : "";
 
+  if (items.length === 0 && !orderPlaced) {
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <h1 className="text-3xl font-bold mb-8">Checkout</h1>
+        <Card className="text-center p-6">
+          <CardContent>
+            <ShoppingBag className="w-10 h-10 mx-auto text-muted-foreground" />
+            <h2 className="text-2xl font-semibold mt-4 mb-2">
+              Your cart is empty
+            </h2>
+            <p className="text-muted-foreground">
+              Looks like you haven't added any items to your cart yet.
+            </p>
+            <Button asChild className="mt-8">
+              <Link to="/menu">Browse Menu</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-8">Checkout</h1>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold">Checkout</h1>
+        {!orderPlaced && items.length > 0 && (
+          <Button
+            variant="outline"
+            onClick={handleClearCart}
+            className="text-destructive hover:text-destructive"
+          >
+            Clear Cart
+          </Button>
+        )}
+      </div>
 
       <div className="grid md:grid-cols-2 gap-8">
         {/* Order Summary */}
@@ -101,19 +160,33 @@ export default function Checkout() {
                         </span>
                       ))}
                     </span>
-                    <span>{formatCurrency(item.totalPrice)}</span>
+                    <span>
+                      {formatCurrency(item.totalPrice * item.quantity)}
+                    </span>
                   </div>
                 ))}
 
-                {currentOrder?.loyaltyPointsApplied && (
-                  <>
-                    <Separator />
-                    <div className="flex justify-between text-muted-foreground">
-                      <span>Loyalty Points Discount</span>
-                      <span>-{formatCurrency(currentOrder.discount ?? 0)}</span>
-                    </div>
-                  </>
-                )}
+                {orderPlaced
+                  ? currentOrder?.loyaltyPointsApplied && (
+                      <>
+                        <Separator />
+                        <div className="flex justify-between text-muted-foreground">
+                          <span>Loyalty Points Discount</span>
+                          <span>
+                            -{formatCurrency(currentOrder.discount ?? 0)}
+                          </span>
+                        </div>
+                      </>
+                    )
+                  : pointsApplied && (
+                      <>
+                        <Separator />
+                        <div className="flex justify-between text-muted-foreground">
+                          <span>Loyalty Points Discount</span>
+                          <span>-{formatCurrency(loyaltyDiscount)}</span>
+                        </div>
+                      </>
+                    )}
 
                 <Separator />
                 <div className="flex justify-between font-semibold">
@@ -131,18 +204,20 @@ export default function Checkout() {
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground mb-2">
-                  You have 150 points available
+                  You have {availableLoyaltyPoints} points available
                 </p>
-                <Button
-                  variant="link"
-                  className="text-primary p-0"
-                  onClick={handleApplyPoints}
-                  disabled={pointsApplied}
-                >
-                  {pointsApplied
-                    ? "Points Applied (-$1.50)"
-                    : "Apply points to this order"}
-                </Button>
+                {availableLoyaltyPoints > 0 && (
+                  <Button
+                    variant="link"
+                    className="text-primary p-0"
+                    onClick={handleApplyPoints}
+                    disabled={pointsApplied}
+                  >
+                    {pointsApplied
+                      ? "Points Applied (-$1.50)"
+                      : "Apply points to this order"}
+                  </Button>
+                )}
               </CardContent>
             </Card>
           )}
