@@ -1,4 +1,9 @@
 import { useState } from "react";
+
+import { useToast } from "@/hooks/use-toast";
+import { useFeatureFlags } from "@/hooks/use-feature-flags";
+import { useCartStore, type CartItem, type MenuItem } from "@/stores/cartStore";
+
 import {
   Card,
   CardContent,
@@ -17,9 +22,6 @@ import {
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
-import { useFeatureFlags } from "@/stores/featureFlags";
-import { useCartStore, type CartItem, type MenuItem } from "@/stores/cartStore";
 
 const menuItems: MenuItem[] = [
   {
@@ -78,7 +80,7 @@ const menuItems: MenuItem[] = [
 
 export default function Menu() {
   const { toast } = useToast();
-  const { showSeasonalMenu, showNutritionInfo, enableCustomization } =
+  const { showSeasonalMenu, showNutritionInfo, enableMenuCustomization } =
     useFeatureFlags();
 
   const filteredMenu = menuItems.filter(
@@ -169,7 +171,6 @@ export default function Menu() {
 
             <CardContent>
               <Accordion type="single" collapsible>
-                {/* Nutrition Info Accordion Item */}
                 {showNutritionInfo && item.nutritionInfo && (
                   <AccordionItem value="nutrition">
                     <AccordionTrigger>Nutrition Information</AccordionTrigger>
@@ -194,8 +195,7 @@ export default function Menu() {
                   </AccordionItem>
                 )}
 
-                {/* Customization Accordion Item */}
-                {enableCustomization && item.customizationOptions && (
+                {enableMenuCustomization && item.customizationOptions && (
                   <AccordionItem value="customization">
                     <AccordionTrigger>Customization Options</AccordionTrigger>
                     <AccordionContent>

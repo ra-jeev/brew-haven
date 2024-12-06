@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCartStore } from "@/stores/cartStore";
-import { useFeatureFlags } from "@/stores/featureFlags";
+import { useFeatureFlags } from "@/hooks/use-feature-flags";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -48,7 +48,7 @@ export default function Layout({ children }: LayoutProps) {
     <div className="min-h-screen bg-background text-foreground ">
       {showPromotionalBanner && (
         <div className="bg-coffee-light text-cream-light p-2 text-center ">
-          🎉 Special Offer: Get 20% off on all seasonal drinks! 🎉
+          {showPromotionalBanner}
         </div>
       )}
 

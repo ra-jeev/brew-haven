@@ -1,22 +1,19 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { ThemeProvider } from "@/components/theme-provider";
-import { Toaster } from "@/components/ui/toaster";
-import { useFeatureFlags } from "@/stores/featureFlags";
-import Layout from "@/components/layout";
+import { withDevCycleProvider } from "@devcycle/react-client-sdk";
+
 import Home from "@/pages/home";
 import Menu from "@/pages/menu";
 import Checkout from "@/pages/checkout";
 import Orders from "@/pages/orders";
 import Admin from "@/pages/admin";
 
-function App() {
-  const { enableDarkMode } = useFeatureFlags();
+import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/toaster";
+import Layout from "@/components/layout";
 
+function App() {
   return (
-    <ThemeProvider
-      defaultTheme={enableDarkMode ? "dark" : "light"}
-      storageKey="coffee-shop-ui-theme"
-    >
+    <ThemeProvider defaultTheme="system" storageKey="coffee-shop-ui-theme">
       <Router>
         <Layout>
           <Routes>
@@ -33,4 +30,9 @@ function App() {
   );
 }
 
-export default App;
+export default withDevCycleProvider({
+  sdkKey: import.meta.env.VITE_DEVCYCLE_CLIENT_SDK_KEY,
+  options: {
+    logLevel: "debug",
+  },
+})(App);

@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { useFeatureFlags } from "@/stores/featureFlags";
+import { useFeatureFlags } from "@/hooks/use-feature-flags";
 import {
   Card,
   CardContent,

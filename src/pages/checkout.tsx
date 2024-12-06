@@ -1,9 +1,13 @@
-import { Link } from "react-router-dom";
 import { useState } from "react";
-import { useFeatureFlags } from "@/stores/featureFlags";
+import { Link } from "react-router-dom";
+
+import { useToast } from "@/hooks/use-toast";
+import { useFeatureFlags } from "@/hooks/use-feature-flags";
 import { useCartStore } from "@/stores/cartStore";
 import { useOrderStore } from "@/stores/orderStore";
-import { useToast } from "@/hooks/use-toast";
+
+import { formatCurrency } from "@/lib/utils";
+
 import { ShoppingBag } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -12,15 +16,10 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { formatCurrency } from "@/lib/utils";
 
 export default function Checkout() {
-  const {
-    enableOnlinePayment,
-    enableLoyaltyPoints,
-    showEstimatedPickupTime,
-    enableLiveOrderTracking,
-  } = useFeatureFlags();
+  const { enableOnlinePayment, enableLoyaltyPoints, enableLiveOrderTracking } =
+    useFeatureFlags();
 
   const { items, clearCart } = useCartStore();
   const {
@@ -222,7 +221,7 @@ export default function Checkout() {
             </Card>
           )}
 
-          {showEstimatedPickupTime && !orderPlaced && (
+          {!orderPlaced && (
             <Card>
               <CardHeader>
                 <CardTitle>Estimated Pickup Time</CardTitle>
