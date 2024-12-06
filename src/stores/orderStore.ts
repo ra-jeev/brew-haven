@@ -2,11 +2,12 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { CartItem } from "@/stores/cartStore";
 
+export type PromotionDiscountType = "none" | "percentage" | "amount";
+
 export interface Order {
   id: string;
   items: CartItem[];
   subtotal: number;
-  discount?: number;
   total: number;
   status:
     | "Preparing"
@@ -17,7 +18,13 @@ export interface Order {
   paymentMethod: string;
   orderDate: string;
   estimatedPickupTime?: string;
-  loyaltyPointsApplied?: boolean;
+  loyaltyDiscount?: number;
+  promotionApplied?: {
+    type: PromotionDiscountType;
+    value: number;
+    minCartValue: number;
+    discount: number;
+  };
 }
 
 interface OrderState {
@@ -45,7 +52,7 @@ export const useOrderStore = create<OrderState>()(
 
         set((state) => ({
           currentOrder: newOrder,
-          orderHistory: [...state.orderHistory, newOrder],
+          orderHistory: [newOrder, ...state.orderHistory],
         }));
       },
 

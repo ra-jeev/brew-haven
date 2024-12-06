@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useFeatureFlags } from "@/hooks/use-feature-flags";
 import { useCartStore } from "@/stores/cartStore";
-import { useOrderStore } from "@/stores/orderStore";
+import { useOrderStore, type PromotionDiscountType } from "@/stores/orderStore";
 
 import { formatCurrency } from "@/lib/utils";
 
@@ -17,9 +17,56 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 
+function LoyaltyDiscount({ discount }: { discount?: number }) {
+  if (!discount) return;
+
+  return (
+    <>
+      <Separator />
+      <div className="flex justify-between text-muted-foreground">
+        <span>Loyalty Points Discount</span>
+        <span>-{formatCurrency(discount)}</span>
+      </div>
+    </>
+  );
+}
+
+function PromotionDiscount({
+  promotion,
+}: {
+  promotion:
+    | {
+        type: PromotionDiscountType;
+        value: number | undefined;
+        discount: number;
+      }
+    | undefined;
+}) {
+  if (!promotion || !promotion.discount) return;
+
+  return (
+    <>
+      <Separator />
+      <div className="flex justify-between text-muted-foreground">
+        <span>
+          Promotion Discount
+          {promotion.type === "percentage" && ` (${promotion.value}%)`}
+        </span>
+        <span>-{formatCurrency(promotion.discount)}</span>
+      </div>
+    </>
+  );
+}
+
 export default function Checkout() {
-  const { enableOnlinePayment, enableLoyaltyPoints, enableLiveOrderTracking } =
-    useFeatureFlags();
+  const {
+    enableOnlinePayment,
+    enableLoyaltyPoints,
+    enableLiveOrderTracking,
+    promotionDiscountType,
+    promotionDiscount,
+    promotionMinCartValue,
+  } = useFeatureFlags();
 
   const { items, clearCart } = useCartStore();
   const {
@@ -34,18 +81,10 @@ export default function Checkout() {
   const [pointsApplied, setPointsApplied] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("card");
 
-  const subtotal = items.reduce(
-    (sum, item) => sum + item.totalPrice * item.quantity,
-    0,
-  );
-  const loyaltyDiscount = pointsApplied ? availableLoyaltyPoints / 100 : 0;
-  const total = +(subtotal - loyaltyDiscount).toFixed(2);
-
   const { toast } = useToast();
   const handleApplyPoints = () => {
     if (!pointsApplied && availableLoyaltyPoints) {
       setPointsApplied(true);
-      setLoyaltyPoints(0);
       toast({
         title: "Loyalty Points Applied",
         description: "Your loyalty points have been applied to this order.",
@@ -67,15 +106,28 @@ export default function Checkout() {
     const newOrder = {
       items: [...items],
       subtotal,
-      discount: loyaltyDiscount,
+      loyaltyDiscount: loyaltyDiscount > 0 ? loyaltyDiscount : undefined,
       total,
-      status: "Preparing" as const,
-      paymentMethod,
-      loyaltyPointsApplied: pointsApplied,
+      status: enableLiveOrderTracking
+        ? ("Preparing" as const)
+        : ("Ready for Pickup" as const),
+      paymentMethod: enableOnlinePayment ? paymentMethod : "cash",
       estimatedPickupTime: "15-20 minutes",
+      promotionApplied:
+        calculatedPromoDiscount > 0
+          ? {
+              type: promotionDiscountType as PromotionDiscountType,
+              value: promotionDiscount,
+              minCartValue: promotionMinCartValue,
+              discount: calculatedPromoDiscount,
+            }
+          : undefined,
     };
 
     createOrder(newOrder);
+    if (pointsApplied) {
+      setLoyaltyPoints(0);
+    }
     setOrderPlaced(true);
     clearCart();
 
@@ -83,16 +135,60 @@ export default function Checkout() {
       setTimeout(() => {
         const orderId = useOrderStore.getState().currentOrder?.id;
         if (orderId) {
-          setTimeout(() => updateOrderStatus(orderId, "Brewing"), 2000);
+          setTimeout(() => updateOrderStatus(orderId, "Brewing"), 4000);
           setTimeout(() => updateOrderStatus(orderId, "Quality Check"), 4000);
           setTimeout(
             () => updateOrderStatus(orderId, "Ready for Pickup"),
             6000,
           );
         }
-      }, 0);
+      }, 4000);
     }
   };
+
+  const calculatePromotionDiscount = (
+    subtotal: number,
+    {
+      promotionDiscountType,
+      promotionDiscount,
+      promotionMinCartValue,
+    }: {
+      promotionDiscountType: string;
+      promotionDiscount: number;
+      promotionMinCartValue: number;
+    },
+  ) => {
+    if (
+      (promotionMinCartValue && subtotal < promotionMinCartValue) ||
+      promotionDiscountType === "none"
+    ) {
+      return 0;
+    }
+
+    if (promotionDiscountType === "percentage") {
+      return (subtotal * promotionDiscount) / 100;
+    }
+
+    if (promotionDiscountType === "amount") {
+      return promotionDiscount;
+    }
+
+    return 0;
+  };
+
+  const subtotal = items.reduce(
+    (sum, item) => sum + item.totalPrice * item.quantity,
+    0,
+  );
+  const calculatedPromoDiscount = calculatePromotionDiscount(subtotal, {
+    promotionDiscountType,
+    promotionDiscount,
+    promotionMinCartValue,
+  });
+  const loyaltyDiscount = pointsApplied ? availableLoyaltyPoints / 100 : 0;
+  const total = +(subtotal - loyaltyDiscount - calculatedPromoDiscount).toFixed(
+    2,
+  );
 
   const displayItems = orderPlaced && currentOrder ? currentOrder.items : items;
   const displayTotal = orderPlaced && currentOrder ? currentOrder.total : total;
@@ -123,7 +219,9 @@ export default function Checkout() {
   return (
     <div className="max-w-4xl mx-auto p-6">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">Checkout</h1>
+        <h1 className="text-3xl font-bold">
+          {orderPlaced ? `Order #${currentOrder?.id}` : "Checkout"}
+        </h1>
         {!orderPlaced && items.length > 0 && (
           <Button
             variant="outline"
@@ -165,27 +263,25 @@ export default function Checkout() {
                   </div>
                 ))}
 
-                {orderPlaced
-                  ? currentOrder?.loyaltyPointsApplied && (
-                      <>
-                        <Separator />
-                        <div className="flex justify-between text-muted-foreground">
-                          <span>Loyalty Points Discount</span>
-                          <span>
-                            -{formatCurrency(currentOrder.discount ?? 0)}
-                          </span>
-                        </div>
-                      </>
-                    )
-                  : pointsApplied && (
-                      <>
-                        <Separator />
-                        <div className="flex justify-between text-muted-foreground">
-                          <span>Loyalty Points Discount</span>
-                          <span>-{formatCurrency(loyaltyDiscount)}</span>
-                        </div>
-                      </>
-                    )}
+                <PromotionDiscount
+                  promotion={
+                    orderPlaced
+                      ? currentOrder?.promotionApplied
+                      : {
+                          type: promotionDiscountType as PromotionDiscountType,
+                          value: promotionDiscount,
+                          discount: calculatedPromoDiscount,
+                        }
+                  }
+                />
+
+                <LoyaltyDiscount
+                  discount={
+                    orderPlaced
+                      ? currentOrder?.loyaltyDiscount
+                      : loyaltyDiscount
+                  }
+                />
 
                 <Separator />
                 <div className="flex justify-between font-semibold">
@@ -213,23 +309,10 @@ export default function Checkout() {
                     disabled={pointsApplied}
                   >
                     {pointsApplied
-                      ? "Points Applied (-$1.50)"
+                      ? `Points Applied (-${formatCurrency(loyaltyDiscount)})`
                       : "Apply points to this order"}
                   </Button>
                 )}
-              </CardContent>
-            </Card>
-          )}
-
-          {!orderPlaced && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Estimated Pickup Time</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold text-muted-foreground">
-                  15-20 minutes
-                </p>
               </CardContent>
             </Card>
           )}
@@ -283,7 +366,8 @@ export default function Checkout() {
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground mb-4">
-                  Thank you for your order. Your order number is #1234.
+                  Thank you for your order. Your order number is{" "}
+                  {currentOrder?.id}.
                 </p>
                 {enableLiveOrderTracking && (
                   <div className="space-y-4">
@@ -304,6 +388,19 @@ export default function Checkout() {
                     />
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          )}
+
+          {!orderPlaced && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Estimated Pickup Time</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold text-muted-foreground">
+                  15-20 minutes
+                </p>
               </CardContent>
             </Card>
           )}

@@ -61,10 +61,24 @@ export default function Orders() {
 
                   <Separator />
 
-                  {order.loyaltyPointsApplied && (
+                  {order.promotionApplied &&
+                    order.promotionApplied.discount > 0 && (
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>
+                          Promotion Discount
+                          {order.promotionApplied.type === "percentage" &&
+                            ` (${order.promotionApplied.value}%)`}
+                        </span>
+                        <span>
+                          -{formatCurrency(order.promotionApplied.discount)}
+                        </span>
+                      </div>
+                    )}
+
+                  {order.loyaltyDiscount && order.loyaltyDiscount > 0 && (
                     <div className="flex justify-between text-muted-foreground">
                       <span>Loyalty Points Discount</span>
-                      <span>-{formatCurrency(order.discount ?? 0)}</span>
+                      <span>-{formatCurrency(order.loyaltyDiscount)}</span>
                     </div>
                   )}
 
