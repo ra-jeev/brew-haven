@@ -1,8 +1,9 @@
 import { Link } from "react-router-dom";
 import { ShoppingBag } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useCartStore } from "@/stores/cartStore";
 import { useFeatureFlags } from "@/hooks/use-feature-flags";
+import { useCartStore } from "@/stores/cartStore";
+import { Button } from "@/components/ui/button";
+import { ModeToggle } from "@/components/mode-toggle";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -45,14 +46,14 @@ export default function Layout({ children }: LayoutProps) {
   const { showPromotionalBanner } = useFeatureFlags();
 
   return (
-    <div className="min-h-screen bg-background text-foreground ">
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
       {showPromotionalBanner && (
-        <div className="bg-coffee-light text-cream-light p-2 text-center ">
+        <div className="bg-coffee-light text-cream-light p-2 text-center">
           {showPromotionalBanner}
         </div>
       )}
 
-      <header className="border-b ">
+      <header className="border-b">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Link
             to="/"
@@ -75,6 +76,7 @@ export default function Layout({ children }: LayoutProps) {
       <footer className="border-t mt-auto">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between text-muted-foreground">
           <p>© 2024 Coffee Haven. All rights reserved.</p>
+          <ModeToggle />
         </div>
       </footer>
     </div>
