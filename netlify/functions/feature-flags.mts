@@ -101,6 +101,28 @@ async function getFeatures(
   return featuresWithConfigs.filter((f) => f !== null);
 }
 
+async function updateFeature(
+  featuresUrl: string,
+  featureId: string,
+  headers: Record<string, string>,
+  update: any,
+) {
+  const response = await fetch(
+    `${featuresUrl}/${featureId}/configurations?environment=development`,
+    {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify(update),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to update feature: ${response.status}`);
+  }
+
+  return await response.json();
+}
+
 export default async (req: Request) => {
   try {
     const { method } = req;
@@ -114,6 +136,23 @@ export default async (req: Request) => {
       const features = await getFeatures(featuresBaseUrl, headers);
 
       return Response.json({ features });
+    }
+
+    if (method === "PATCH") {
+      const body = await req.json();
+      const { featureId, update } = body;
+
+      const data = await updateFeature(
+        featuresBaseUrl,
+        featureId,
+        {
+          ...headers,
+          "Content-Type": "application/json",
+        },
+        update,
+      );
+
+      return Response.json({ data });
     }
 
     return new Response(JSON.stringify({ error: "Method not allowed" }), {

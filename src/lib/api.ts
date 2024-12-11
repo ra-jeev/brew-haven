@@ -50,3 +50,27 @@ export async function getFeatureFlags() {
     };
   }
 }
+
+export async function updateFeatureFlag(
+  featureId: string,
+  update: { status?: string; targets?: Target[] },
+) {
+  try {
+    const response = await fetch("/.netlify/functions/feature-flags", {
+      method: "PATCH",
+      body: JSON.stringify({ featureId, update }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to update feature");
+    }
+
+    const data = await response.json();
+    return { success: true, data };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
