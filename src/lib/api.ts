@@ -1,3 +1,23 @@
+interface Distribution {
+  _variation: string;
+  percentage: number;
+}
+
+interface Audience {
+  name: string;
+  filters: {
+    operator: "and" | "or";
+    filters: { type: string }[];
+  };
+}
+
+export interface Target {
+  _id: string;
+  name: string;
+  distribution: Distribution[];
+  audience: Audience;
+}
+
 export interface Feature {
   _id: string;
   key: string;
@@ -11,19 +31,17 @@ export interface Feature {
     name: string;
     variables: Record<string, boolean | string | number>;
   }[];
-  currentVariation?: string;
-  distributions?: Array<{
-    _variation: string;
-    percentage: number;
-  }>;
+  targets: Target[];
 }
 
 export async function getFeatureFlags() {
   try {
     const response = await fetch("/.netlify/functions/feature-flags");
-    if (!response.ok) throw new Error("Failed to fetch flags");
+    if (!response.ok) {
+      throw new Error("Failed to fetch flags");
+    }
+
     const data = await response.json();
-    console.log("server sent data", data);
     return { success: true, data: data.features as Feature[] };
   } catch (error) {
     return {

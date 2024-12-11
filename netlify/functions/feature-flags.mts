@@ -13,11 +13,18 @@ interface FeatureConfig {
   _feature: string;
   _environment: string;
   status: string;
-  targets: Array<{
+  targets: {
     _id: string;
     name: string;
     distribution: Distribution[];
-  }>;
+    audience: {
+      name: string;
+      filters: {
+        operator: "and" | "or";
+        filters: { type: string }[];
+      };
+    };
+  }[];
 }
 
 let tokenCache: { token: string; expiresAt: number } | null = null;
@@ -59,62 +66,54 @@ async function getAuthToken() {
   }
 }
 
+async function getFeatures(
+  featuresUrl: string,
+  headers: Record<string, string>,
+) {
+  const featuresResponse = await fetch(featuresUrl, { headers });
+
+  if (!featuresResponse.ok) {
+    throw new Error(`Failed to fetch flags: ${featuresResponse.status}`);
+  }
+
+  const featuresData = await featuresResponse.json();
+  const configPromises = featuresData.map(async (feature: any) => {
+    const configResponse = await fetch(
+      `${featuresUrl}/${feature._id}/configurations?environment=development`,
+      { headers },
+    );
+
+    if (!configResponse.ok) {
+      console.error(`Failed to fetch config for feature ${feature._id}`);
+      return null;
+    }
+
+    const configs: FeatureConfig[] = await configResponse.json();
+
+    return {
+      ...feature,
+      targets: configs[0].targets,
+      status: configs[0].status,
+    };
+  });
+
+  const featuresWithConfigs = await Promise.all(configPromises);
+  return featuresWithConfigs.filter((f) => f !== null);
+}
+
 export default async (req: Request) => {
   try {
-    const token = await getAuthToken();
     const { method } = req;
+    const token = await getAuthToken();
+    const featuresBaseUrl = `https://api.devcycle.com/v1/projects/${process.env.DEVCYCLE_PROJECT_ID}/features`;
+    const headers = {
+      Authorization: `Bearer ${token}`,
+    };
 
     if (method === "GET") {
-      const featuresResponse = await fetch(
-        `https://api.devcycle.com/v1/projects/${process.env.DEVCYCLE_PROJECT_ID}/features`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
+      const features = await getFeatures(featuresBaseUrl, headers);
 
-      if (!featuresResponse.ok) {
-        throw new Error(`Failed to fetch flags: ${featuresResponse.status}`);
-      }
-
-      const featuresData = await featuresResponse.json();
-      const configPromises = featuresData.map(async (feature: any) => {
-        const configResponse = await fetch(
-          `https://api.devcycle.com/v1/projects/${process.env.DEVCYCLE_PROJECT_ID}/features/${feature._id}/configurations`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          },
-        );
-
-        if (!configResponse.ok) {
-          console.error(`Failed to fetch config for feature ${feature._id}`);
-          return null;
-        }
-
-        const configs: FeatureConfig[] = await configResponse.json();
-        const activeConfig = configs.find((c) => c.status === "active");
-
-        return {
-          ...feature,
-          currentVariation:
-            feature.type === "release"
-              ? activeConfig?.targets?.[0]?.distribution?.[0]?._variation
-              : undefined,
-          distributions:
-            feature.type === "experiment"
-              ? activeConfig?.targets?.[0]?.distribution
-              : undefined,
-          status: activeConfig?.status ?? "inactive",
-        };
-      });
-
-      const featuresWithConfigs = await Promise.all(configPromises);
-      const validFeatures = featuresWithConfigs.filter((f) => f !== null);
-
-      return Response.json({ features: validFeatures });
+      return Response.json({ features });
     }
 
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
