@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
 import { updateFeatureFlag, getFeatureFlags, type Feature } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
 import {
@@ -22,6 +23,9 @@ import { Badge } from "@/components/ui/badge";
 export default function Admin() {
   const [features, setFeatures] = useState<Feature[]>([]);
   const [loading, setLoading] = useState(true);
+  const [updatingFeatures, setUpdatingFeatures] = useState<
+    Record<string, boolean>
+  >({});
 
   useEffect(() => {
     loadFeatures();
@@ -47,16 +51,19 @@ export default function Admin() {
     feature: Feature,
     variationId: string,
   ) => {
+    setUpdatingFeatures((prev) => ({ ...prev, [feature._id]: true }));
     const targets = feature.targets;
     targets[0].distribution[0]._variation = variationId;
     const result = await updateFeatureFlag(feature._id, {
       targets,
     });
 
+    setUpdatingFeatures((prev) => ({ ...prev, [feature._id]: false }));
     handleUpdateResult(result, feature.name);
   };
 
   const handleExperimentToggle = async (feature: Feature) => {
+    setUpdatingFeatures((prev) => ({ ...prev, [feature._id]: true }));
     const data =
       feature.status === "active"
         ? { status: "inactive" }
@@ -67,6 +74,7 @@ export default function Admin() {
 
     const result = await updateFeatureFlag(feature._id, data);
 
+    setUpdatingFeatures((prev) => ({ ...prev, [feature._id]: false }));
     handleUpdateResult(result, feature.name);
   };
 
@@ -121,23 +129,32 @@ export default function Admin() {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="font-medium">Current Variation</span>
-                    <Select
-                      value={feature.targets[0].distribution[0]._variation}
-                      onValueChange={(value) =>
-                        handleVariationChange(feature, value)
-                      }
-                    >
-                      <SelectTrigger className="w-[200px]">
-                        <SelectValue placeholder="Select variation" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {feature.variations.map((variation) => (
-                          <SelectItem key={variation._id} value={variation._id}>
-                            {variation.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="flex items-center gap-x-2">
+                      <Select
+                        value={feature.targets[0].distribution[0]._variation}
+                        onValueChange={(value) =>
+                          handleVariationChange(feature, value)
+                        }
+                        disabled={updatingFeatures[feature._id]}
+                      >
+                        <SelectTrigger className="w-[200px]">
+                          <SelectValue placeholder="Select variation" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {feature.variations.map((variation) => (
+                            <SelectItem
+                              key={variation._id}
+                              value={variation._id}
+                            >
+                              {variation.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {updatingFeatures[feature._id] && (
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                      )}
+                    </div>
                   </div>
 
                   <div className="bg-muted/50 p-4 rounded-lg">
@@ -162,10 +179,16 @@ export default function Admin() {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="font-medium">Experiment Status</span>
-                    <Switch
-                      checked={feature.status === "active"}
-                      onCheckedChange={() => handleExperimentToggle(feature)}
-                    />
+                    <div className="flex items-center gap-x-2">
+                      <Switch
+                        checked={feature.status === "active"}
+                        onCheckedChange={() => handleExperimentToggle(feature)}
+                        disabled={updatingFeatures[feature._id]}
+                      />
+                      {updatingFeatures[feature._id] && (
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                      )}
+                    </div>
                   </div>
 
                   <div className="bg-muted/50 p-4 rounded-lg">
