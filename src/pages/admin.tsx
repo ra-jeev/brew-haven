@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { updateFeatureFlag, getFeatureFlags, type Feature } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
@@ -97,6 +98,12 @@ export default function Admin() {
     }
   };
 
+  const navigate = useNavigate();
+  const handleLogout = () => {
+    sessionStorage.removeItem("isAdminAuthenticated");
+    navigate("/");
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -109,7 +116,12 @@ export default function Admin() {
     <div className="max-w-4xl mx-auto p-6">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">Feature Administration</h1>
-        <Button onClick={loadFeatures}>Refresh Features</Button>
+        <div className="flex items-center gap-x-2">
+          <Button onClick={loadFeatures}>Refresh Features</Button>
+          <Button variant="destructive" onClick={handleLogout}>
+            Logout
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-6">

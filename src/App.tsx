@@ -9,6 +9,7 @@ import Admin from "@/pages/admin";
 
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
+import ProtectedRoute from "@/components/protected-route";
 import Layout from "@/components/layout";
 
 function App() {
@@ -21,7 +22,14 @@ function App() {
             <Route path="/menu" element={<Menu />} />
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/orders" element={<Orders />} />
-            <Route path="/admin" element={<Admin />} />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute>
+                  <Admin />
+                </ProtectedRoute>
+              }
+            />
           </Routes>
         </Layout>
       </Router>
