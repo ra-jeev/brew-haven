@@ -1,106 +1,194 @@
-import { useFeatureFlags, FeatureFlags } from "@/stores/featureFlags";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { useEffect, useState } from "react";
+import { updateFeatureFlag, getFeatureFlags, type Feature } from "@/lib/api";
+import { toast } from "@/hooks/use-toast";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
 
 export default function Admin() {
-  const featureFlags = useFeatureFlags();
-  const [showResetAlert, setShowResetAlert] = useState(false);
+  const [features, setFeatures] = useState<Feature[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const flagCategories = {
-    "Menu Features": [
-      "showSeasonalMenu",
-      "showNutritionInfo",
-      "enableCustomization",
-    ],
-    "Checkout Features": [
-      "enableOnlinePayment",
-      "enableLoyaltyPoints",
-      "showEstimatedPickupTime",
-    ],
-    "UI/UX Features": [
-      "enableDarkMode",
-      "showPromotionalBanner",
-      "enableLiveOrderTracking",
-    ],
+  useEffect(() => {
+    loadFeatures();
+  }, []);
+
+  const loadFeatures = async () => {
+    setLoading(true);
+    const result = await getFeatureFlags();
+    setLoading(false);
+
+    if (result.success && result.data) {
+      setFeatures(result.data);
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Error loading features",
+        description: result.error,
+      });
+    }
   };
 
-  const getFlagDisplayName = (flag: string) => {
-    return flag
-      .replace(/([A-Z])/g, " $1")
-      .replace(/^./, (str) => str.toUpperCase());
+  const handleVariationChange = async (
+    feature: Feature,
+    variationId: string,
+  ) => {
+    const targets = feature.targets;
+    targets[0].distribution[0]._variation = variationId;
+    const result = await updateFeatureFlag(feature._id, {
+      targets,
+    });
+
+    handleUpdateResult(result, feature.name);
   };
 
-  const handleReset = () => {
-    featureFlags.resetFlags();
-    setShowResetAlert(true);
-    setTimeout(() => setShowResetAlert(false), 3000);
+  const handleExperimentToggle = async (feature: Feature) => {
+    const data =
+      feature.status === "active"
+        ? { status: "inactive" }
+        : {
+            status: "active",
+            targets: feature.targets,
+          };
+
+    const result = await updateFeatureFlag(feature._id, data);
+
+    handleUpdateResult(result, feature.name);
   };
+
+  const handleUpdateResult = (
+    result: { success: boolean; error?: string },
+    featureName: string,
+  ) => {
+    if (!result.success) {
+      toast({
+        variant: "destructive",
+        title: "Failed to update feature",
+        description: result.error,
+      });
+    } else {
+      toast({
+        title: "Feature updated",
+        description: `${featureName} updated successfully`,
+      });
+      loadFeatures();
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-pulse">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto p-6">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-foreground">
-          Feature Flag Administration
-        </h1>
-        <Button variant="destructive" onClick={handleReset} className="ml-4">
-          Reset All Flags
-        </Button>
+        <h1 className="text-3xl font-bold">Feature Administration</h1>
+        <Button onClick={loadFeatures}>Refresh Features</Button>
       </div>
 
-      {showResetAlert && (
-        <Alert className="mb-6">
-          <AlertDescription>
-            All feature flags have been reset to their default values.
-          </AlertDescription>
-        </Alert>
-      )}
-
       <div className="grid gap-6">
-        {Object.entries(flagCategories).map(([category, flags]) => (
-          <Card key={category}>
+        {features.map((feature) => (
+          <Card key={feature._id}>
             <CardHeader>
-              <CardTitle>{category}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {flags.map((flag) => (
-                <div
-                  key={flag}
-                  className="flex items-center justify-between p-4 bg-muted/50 rounded-lg"
-                >
-                  <div className="space-y-1">
-                    <h3 className="font-medium text-foreground">
-                      {getFlagDisplayName(flag)}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      Status:{" "}
-                      <span
-                        className={
-                          featureFlags[flag as keyof FeatureFlags]
-                            ? "text-green-600 dark:text-green-400"
-                            : "text-red-600 dark:text-red-400"
-                        }
-                      >
-                        {featureFlags[flag as keyof FeatureFlags]
-                          ? "Enabled"
-                          : "Disabled"}
-                      </span>
-                    </p>
-                  </div>
-                  <Switch
-                    checked={featureFlags[flag as keyof FeatureFlags]}
-                    onCheckedChange={(checked) =>
-                      featureFlags.setFeatureFlag(
-                        flag as keyof FeatureFlags,
-                        checked,
-                      )
-                    }
-                    aria-label={`Toggle ${getFlagDisplayName(flag)}`}
-                  />
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>{feature.name}</CardTitle>
+                  <CardDescription>{feature.description}</CardDescription>
                 </div>
-              ))}
+                <Badge>{feature.type}</Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {feature.type === "release" ? (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">Current Variation</span>
+                    <Select
+                      value={feature.targets[0].distribution[0]._variation}
+                      onValueChange={(value) =>
+                        handleVariationChange(feature, value)
+                      }
+                    >
+                      <SelectTrigger className="w-[200px]">
+                        <SelectValue placeholder="Select variation" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {feature.variations.map((variation) => (
+                          <SelectItem key={variation._id} value={variation._id}>
+                            {variation.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="bg-muted/50 p-4 rounded-lg">
+                    <h4 className="font-medium mb-2">Current Variables:</h4>
+                    <div className="space-y-2">
+                      {Object.entries(
+                        feature.variations.find(
+                          (v) =>
+                            v._id ===
+                            feature.targets[0].distribution[0]._variation,
+                        )?.variables ?? {},
+                      ).map(([key, value]) => (
+                        <div key={key} className="flex justify-between text-sm">
+                          <span>{key}:</span>
+                          <span className="font-mono">{String(value)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">Experiment Status</span>
+                    <Switch
+                      checked={feature.status === "active"}
+                      onCheckedChange={() => handleExperimentToggle(feature)}
+                    />
+                  </div>
+
+                  <div className="bg-muted/50 p-4 rounded-lg">
+                    <h4 className="font-medium mb-2">Traffic Distribution:</h4>
+                    <div className="space-y-2">
+                      {feature.targets[0].distribution.map((dist) => {
+                        const variation = feature.variations.find(
+                          (v) => v._id === dist._variation,
+                        );
+                        return (
+                          <div
+                            key={dist._variation}
+                            className="flex justify-between text-sm"
+                          >
+                            <span>{variation?.name ?? "Unknown"}</span>
+                            <span>{(dist.percentage * 100).toFixed(0)}%</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         ))}
