@@ -1,50 +1,84 @@
-# React + TypeScript + Vite
+# Brew Haven ☕
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Project Overview
 
-Currently, two official plugins are available:
+Brew Haven is a dynamic coffee shop web application that demonstrates the use of feature flags using DevCycle. The app provides a simple customizable menu, checkout experience, and an innovative admin interface for managing feature variations and A/B testing.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Key Features
 
-## Expanding the ESLint configuration
+- Home page showcasing the coffee shop
+- Interactive menu display
+- Dummy checkout process
+- Feature flag management through DevCycle
+- Admin page for feature flag control
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+## Technologies Used
 
-- Configure the top-level `parserOptions` property like this:
+- React
+- Vite
+- Shadcn UI
+- DevCycle SDK
+- Netlify Functions
 
-```js
-export default tseslint.config({
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+## Prerequisites
+
+- Node.js (recommended version 18+)
+- pnpm package manager
+- DevCycle account
+- Netlify account and CLI (for local development and deployment)
+
+## Environment Setup
+
+1. Clone the repository
+2. Install dependencies:
+
+```bash
+pnpm install
+```
+3. Rename `.env.example` to `.env` and update the following environment variables:
+
+```bash
+VITE_DEVCYCLE_CLIENT_SDK_KEY=your_client_sdk_key
+DEVCYCLE_API_CLIENT_ID=your_client_id
+DEVCYCLE_API_CLIENT_SECRET=your_client_secret
+DEVCYCLE_PROJECT_ID=your_project_id
 ```
 
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
+## Local Development
 
-```js
-// eslint.config.js
-import react from 'eslint-plugin-react'
+To run the application in development mode:
 
-export default tseslint.config({
-  // Set the react version
-  settings: { react: { version: '18.3' } },
-  plugins: {
-    // Add the react plugin
-    react,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended rules
-    ...react.configs.recommended.rules,
-    ...react.configs['jsx-runtime'].rules,
-  },
-})
+```bash
+# For standard development
+pnpm dev
+
+# For testing admin page with Netlify Functions
+netlify dev
 ```
+
+## Deployment
+
+The project is set up to be easily deployed on Netlify. Ensure all environment variables are correctly set in your Netlify deployment settings.
+
+## Feature Flag Management
+
+The application leverages DevCycle for:
+
+- Runtime feature flags adaption using DevCycle React SDK
+- Feature flags control through the admin interface using the DevCycle Management APIs
+
+> **Note:** The admin page's management APIs are secured using Netlify Functions to protect sensitive credentials.
+
+The application has two release type feature flags:
+
+- Coffee Menu
+  - 3 variables to control: 1. showing nutrition info, 2. enable seasonal menu, 3. enable order customization
+  - 3 different variations (Basic / Standard / Seasonal) to choose from
+- Payment and Ordering
+  - 3 variables to control: 1. online payment, 2. loyalty points, and 3. live order tracking
+  - 3 different variations (Basic / Standard / Premium) to choose from
+
+Apart from the release type feature flags, the app also uses an A/B testing flag. This flag enables promotions for certain percentage of customers. You can set the promotion text, the discount amount/percentage, and if needed, a min cart value to avail the promotion.
+## License
+
+Specify your license here (e.g., MIT, Apache 2.0)
