@@ -67,7 +67,8 @@ The application leverages DevCycle for:
 - Runtime feature flags adaption using DevCycle React SDK
 - Feature flags control through the admin interface using the DevCycle Management APIs
 
-> **Note:** The admin page's management APIs are secured using Netlify Functions to protect sensitive credentials.
+> [!NOTE]
+> The admin page's management APIs are secured using Netlify Functions to protect sensitive credentials.
 
 The application has two release type feature flags:
 
@@ -79,6 +80,7 @@ The application has two release type feature flags:
   - 3 different variations (Basic / Standard / Premium) to choose from
 
 Apart from the release type feature flags, the app also uses an A/B testing flag. This flag enables promotions for certain percentage of customers. You can set the promotion text, the discount amount/percentage, and if needed, a min cart value to avail the promotion.
+
 ## License
 
-Specify your license here (e.g., MIT, Apache 2.0)
+This project is licensed under the MIT License. See the [LICENSE](./LICENSE) file for details.
